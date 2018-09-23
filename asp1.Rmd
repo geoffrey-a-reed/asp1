@@ -1,0 +1,6 @@
+---
+title: "Analytic Story Page 1"
+author: "Geoffrey A. Reed"
+date: "9/23/2018"
+output: word_document
+---
