@@ -36,3 +36,10 @@ vignettes/*.pdf
 # Shiny token, see https://shiny.rstudio.com/articles/shinyapps.html
 rsconnect/
 .Rproj.user
+
+# Microsoft Office files
+*.doc
+*.docx
+
+# PDF files
+*.pdf
