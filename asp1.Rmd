@@ -1,6 +1,7 @@
 ---
 title: "Analytic Story Page 1"
-author: "Geoffrey A. Reed"
-date: "9/23/2018"
-output: word_document
+subtitle: "*The Art of Getting Money*, by P.T. Barnum"
+output: 
+  word_document:
+    reference_docx: "asp1_style_reference.docx"
 ---
