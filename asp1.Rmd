@@ -5,3 +5,43 @@ output:
   word_document:
     reference_docx: "asp1_style_reference.docx"
 ---
+
+```{R, echo = FALSE}
+file <- "Text File for ASP1.txt"  # Constant path to Barnum's book
+
+# Read text from file into data frame, labeling line numbers for later use
+text <- tibble::data_frame(line = readr::read_lines(file),
+                           index = 1:length(line))
+
+# Filter out title, author, and Project Gutenberg boilerplate
+text <- dplyr::filter(text, index > 43, index < 1402)
+
+# Barnum's section headers are on their own line in capital letters. Filter
+# out any line that looks like a section header.
+text <- dplyr::filter(text, 
+  !stringr::str_detect(line, "^\\s*[A-Z]{2,}.*[A-Z]{2,}\\s*$")
+)
+
+# Convert all text to lowercase
+text <- dplyr::mutate(text, stringr::str_to_lower(line))
+
+# Replace non-ASCII lowercase characters (and the single-quote style
+# apostrophe) with a single space
+text <- dplyr::mutate(text, stringr::str_replace_all(line, "[^a-z']", " "))
+
+# Replace sequences of whitespace characters with a single space
+text <- dplyr::mutate(text, line = stringr::str_squish(line))
+
+# Remove leading and trailing whitespace
+text <- dplyr::mutate(text, line = stringr::str_trim(line))
+
+# Tokenize lines into words
+words <- tidytext::unnest_tokens(text, word, line)
+
+# Add word counts
+counts <- dplyr::count(words, word, sort = TRUE)
+counts = dplyr::transmute(counts, word, count = n)
+
+# Turn raw counts into frequencies
+frequencies = dplyr::mutate(counts, frequency = count / sum(count))
+```
