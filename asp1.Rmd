@@ -45,3 +45,86 @@ counts = dplyr::transmute(counts, word, count = n)
 # Turn raw counts into frequencies
 frequencies = dplyr::mutate(counts, frequency = count / sum(count))
 ```
+
+Plain text in a paragraph. Note that this plain text will also have body text
+style formatting in the target document.
+
+A space will start a new paragraph.
+
+*italics* and **bold**
+
+`stringr::str_squish` is verbatum code
+
+superscript^TM
+
+subscript^~2~
+
+escaped \* \_ \\
+
+endash: --, emdash: ---
+
+equation: $A = \pi*r^{2}$
+
+equation block:
+
+$$E = mc^{2}$$
+
+> block quoted stuff
+
+# Header 1
+
+## Header 2
+
+### Header 3
+
+#### Header 4
+
+##### Header 5
+
+###### Header 6
+
+<!--Text comment>
+
+<em>HTML output!<em>
+\textbf{TeX output}
+
+<http://www.google.com/>
+
+[google](http://www.google.com/)
+
+* level 1
+  + level 2
+    - level 3
+* level 1
+
+1. one
+2. one
+  i) two
+    A. three
+
+(@) interrupted
+
+this
+
+(@) continues
+
+
+Term
+: Definition of something
+
+| right | left | default | center |
+|------:|:-----|---------|:------:|
+| 12    | 12   | 12      | 12     |
+| 1.2   | 1.2  | 1.2     | 1.2    |
+| $1.00 | $1.00| $1.00   | $1.00  |
+
+- slide
+- bullet
+
+horizontal rule
+
+***
+
+A footnote [^1]
+
+[^1]: The footnote
