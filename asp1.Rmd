@@ -1,130 +1,622 @@
 ---
-title: "Analytic Story Page 1"
-subtitle: "*The Art of Getting Money*, by P.T. Barnum"
+title: "Man of Business"
+subtitle: "Masculine Fortune-Seeking in P.T. Barnum's *The Art of Money
+           Getting*"
 output: 
   word_document:
     reference_docx: "asp1_style_reference.docx"
 ---
 
 ```{R, echo = FALSE}
-file <- "Text File for ASP1.txt"  # Constant path to Barnum's book
-
-# Read text from file into data frame, labeling line numbers for later use
-text <- tibble::data_frame(line = readr::read_lines(file),
-                           index = 1:length(line))
-
-# Filter out title, author, and Project Gutenberg boilerplate
-text <- dplyr::filter(text, index > 43, index < 1402)
-
-# Barnum's section headers are on their own line in capital letters. Filter
-# out any line that looks like a section header.
-text <- dplyr::filter(text, 
-  !stringr::str_detect(line, "^\\s*[A-Z]{2,}.*[A-Z]{2,}\\s*$")
-)
-
-# Convert all text to lowercase
-text <- dplyr::mutate(text, stringr::str_to_lower(line))
-
-# Replace non-ASCII lowercase characters (and the single-quote style
-# apostrophe) with a single space
-text <- dplyr::mutate(text, stringr::str_replace_all(line, "[^a-z']", " "))
-
-# Replace sequences of whitespace characters with a single space
-text <- dplyr::mutate(text, line = stringr::str_squish(line))
-
-# Remove leading and trailing whitespace
-text <- dplyr::mutate(text, line = stringr::str_trim(line))
-
-# Tokenize lines into words
-words <- tidytext::unnest_tokens(text, word, line)
-
-# Add word counts
-counts <- dplyr::count(words, word, sort = TRUE)
-counts = dplyr::transmute(counts, word, count = n)
-
-# Turn raw counts into frequencies
-frequencies = dplyr::mutate(counts, frequency = count / sum(count))
+knitr::opts_knit$set(eval.after = 'fig.cap')
+knitr::opts_chunk$set(echo = FALSE)
 ```
 
-Plain text in a paragraph. Note that this plain text will also have body text
-style formatting in the target document.
+```{R, load_analysis_packages}
+# Load analytical packages
+suppressPackageStartupMessages({
+    library(dplyr)     # Manipulating data frames
+    library(magrittr)  # Pipes
+    library(readr)     # Reading text files
+    library(stringr)   # Working with strings
+    library(tibble)    # Improved data frames
+    library(tidyr)     # Reshaping data frames
+    library(tidytext)  # Text analysis with data frames
+    library(widyr)     # Tall -> Wide -> Tall data frame operations
+})
+```
 
-A space will start a new paragraph.
+```{R, stopwords}
+# Collect SMART stopwords in a data frame and vector for future use
+smart_stopwords <-
+    get_stopwords(language = 'en', source = 'smart') %>%
+    pull(word)
+```
 
-*italics* and **bold**
+```{R, read_preprocess_text}
+# Read and preprocess project text into a data frame
+text <-
+    data_frame(text = read_file('Text File for ASP1.txt'),
+               text_num = 1:length(text)) %>%
+    mutate(text = text %>%
+               # Remove metadata from header and footer
+               str_extract(regex('In the United States.+three good friends\\.',
+                                 dotall = TRUE)) %>%
+               # Improve sentence and paragraph tokenization performance by
+               # adjusting text boundaries
+               str_replace_all(c('P\\.T\\.' = 'Phineas Taylor',
+                                 'Dr\\.' = 'Doctor',
+                                 'Mr\\.' = 'Mister',
+                                 'Mrs\\.' = 'Missus',
+                                 'A\\.T\\.' = 'Alexander Turney',
+                                 # Convert section headers to sentences
+                                 '([A-Z,\'" ]{8,})' = '\\1.',
+                                 # Collapse repeated periods
+                                 '\\.\\.' = '\\.',
+                                 # Flip incorrect period/quote placement
+                                 '"\\.' = '."',
+                                 # Collapse paragraph breaks after colons
+                                 ':\\s+' = ': ')))
+```
 
-`stringr::str_squish` is verbatum code
+```{R, split_sections}
+# Split text into numbered sections (by four consecutive blank lines), keeping
+# redundent text numbering
+sections <-
+    text %>%
+    unnest_tokens(section, text, token = 'regex', pattern = '(?:\\r\\n){5}',
+                  to_lower = FALSE) %>%
+    mutate(section_num = 1:length(section))
+```
 
-superscript^TM
+```{R, split_paragraphs}
+# Split sections into numbered paragraphs (by one blank line), keeping text and
+# section numbers
+paragraphs <-
+    sections %>%
+    unnest_tokens(paragraph, section, token = 'regex',
+                  pattern = '(?:\\r\\n){2}', to_lower = FALSE) %>%
+    mutate(paragraph_num = 1:length(paragraph))
+```
 
-subscript^~2~
+```{R, split_sentences}
+# Split paragraphs into numbered sentences (via `tidytext`-specific splitting
+# algorithm), keeping text, section, and paragraph numbers
+sentences <-
+    paragraphs %>%
+    unnest_tokens(sentence, paragraph, token = 'sentences',
+                  to_lower = FALSE) %>%
+    mutate(sentence_num = 1:length(sentence))
+```
 
-escaped \* \_ \\
+```{R, split_words}
+# Split sentences into numbered words (via `tidytext`-specific splitting
+# algorithm), removing any tokens containing numbers. Keep text, section,
+# paragraph, and sentence numbers.
+words <-
+    sentences %>%
+    unnest_tokens(word, sentence, token = 'words') %>%
+    filter(word %>%
+               str_detect('\\d') %>%
+               not()) %>%
+    mutate(word_num = 1:length(word))
+```
 
-endash: --, emdash: ---
+```{R, split_bigrams}
+# Split sentences into numbered bigrams (via `tidytext`-specific splitting
+# algorithm), removing any tokens containing numbers. Keep text, section,
+# paragraph, and sentence numbers.
+bigrams <-
+    sentences %>%
+    unnest_tokens(bigram, sentence, token = 'ngrams', n = 2) %>%
+    filter(bigram %>%
+               str_detect('\\d') %>%
+               not()) %>%
+    mutate(bigram_num = 1:length(bigram))
+```
 
-equation: $A = \pi*r^{2}$
+```{R, split_trigrams}
+# Split sentences into numberd trigrams (via `tidytext`-specific splitting
+# algorithm), removing any tokens containing numbers. Keep text, section,
+# paragraph, and sentence numbers.
+trigrams <-
+    sentences %>%
+    unnest_tokens(trigram, sentence, token = 'ngrams', n = 3) %>%
+    filter(trigram %>%
+               str_detect('\\d') %>%
+               not()) %>%
+    mutate(trigram_num = 1:length(trigram))
+```
 
-equation block:
+```{R, word_frequencies}
+# Calculate word frequencies, filtering stopwords according to the scheme
+# used by Gerard Salton and Chris Buckley in Cornell's SMART information
+# retrieval system. Order by descending frequency.
+word_freqs <-
+    words %>%
+    filter(word %in% smart_stopwords %>% not()) %>%
+    {
+        words <- .
+        total <-
+            words %>%
+            pull(word) %>%
+            length()
+        words %>%
+            group_by(word) %>%
+            summarize(count = n(),
+                      frequency = count / total) %>%
+            ungroup()
+    } %>%
+    arrange(frequency %>% desc())
+```
 
-$$E = mc^{2}$$
+```{R, bigram_frequencies}
+# Calculate bigram frequencies, filtering stopwords according to the scheme
+# used by Gerard Salton and Chris Buckley in Cornell's SMART information
+# retrieval system. Order by descending frequency.
+bigram_freqs <-
+    bigrams %>%
+    separate(bigram, c('word1', 'word2'), sep = '\\s+') %>%
+    filter(word1 %in% smart_stopwords %>% not(),
+           word2 %in% smart_stopwords %>% not()) %>%
+    unite(bigram, word1, word2, sep = ' ') %>%
+    {
+        bigrams <- .
+        total <-
+            bigrams %>%
+            pull(bigram) %>%
+            length()
+        bigrams %>%
+            group_by(bigram) %>%
+            summarize(count = n(),
+                      frequency = count / total) %>%
+            ungroup()
+    } %>%
+    arrange(frequency %>% desc())
+```
 
-> block quoted stuff
+```{R, trigram_frequencies}
+# Calculate trigram frequencies, filtering stopwords according to the scheme
+# used by Gerard Salton and Chris Buckley in Cornell's SMART information
+# retrieval system. Order by descending frequency.
+trigram_freqs <-
+    trigrams %>%
+    separate(trigram, c('word1', 'word2', 'word3'), sep = '\\s+') %>%
+    filter(word1 %in% smart_stopwords %>% not(),
+           word2 %in% smart_stopwords %>% not(),
+           word3 %in% smart_stopwords %>% not()) %>%
+    unite(trigram, word1, word2, word3, sep = ' ') %>%
+    {
+        trigrams <- .
+        total <-
+            trigrams %>%
+            pull(trigram) %>%
+            length()
+        trigrams %>%
+            group_by(trigram) %>%
+            summarize(count = n(),
+                      frequency = count / total) %>%
+            ungroup()
+    } %>%
+    arrange(frequency %>% desc())
+```
 
-# Header 1
+```{R, words_starting_sentence}
+# Calculate the frequency of words starting a sentence, filtering stopwords
+# according to the SMART scheme mentioned above. Order by descending
+# frequency.
+word_starting_sentence_freqs <-
+    words %>%
+    group_by(sentence_num) %>%
+    summarize(word = first(word)) %>%
+    ungroup() %>%
+    filter(word %in% smart_stopwords %>% not()) %>%
+    {
+        words <- .
+        total <-
+            words %>%
+            pull(word) %>%
+            length()
+        words %>%
+            group_by(word) %>%
+            summarize(count = n(),
+                      frequency = count / total) %>%
+            ungroup()
+    } %>%
+    arrange(frequency %>% desc())
+```
 
-## Header 2
+```{R, words_ending_sentence}
+# Calculate the frequency of words ending a sentence, filtering stopwords
+# according to the SMART scheme mentioned above. Order by descending
+# frequency.
+word_ending_sentence_frequencies <-
+    words %>%
+    group_by(sentence_num) %>%
+    summarize(word = last(word)) %>%
+    ungroup() %>%
+    filter(word %in% smart_stopwords %>% not()) %>%
+    {
+        words <- .
+        total <-
+            words %>%
+            pull(word) %>%
+            length()
+        words %>%
+            group_by(word) %>%
+            summarize(count = n(),
+                      frequency = count / total) %>%
+            ungroup()
+    } %>%
+    arrange(frequency %>% desc())
+```
 
-### Header 3
+```{R, bigrams_starting_sentence}
+# Calculate the frequency of bigrams starting a sentence, filtering stopwords
+# according to the SMART scheme mentioned above. Order by descending
+# frequency.
+bigram_starting_sentence_freqs <-
+    bigrams %>%
+    group_by(sentence_num) %>%
+    summarize(bigram = first(bigram)) %>%
+    ungroup() %>%
+    separate(bigram, c('word1', 'word2'), sep = '\\s+') %>%
+    filter(word1 %in% smart_stopwords %>% not(),
+           word2 %in% smart_stopwords %>% not()) %>%
+    unite(bigram, word1, word2, sep = ' ') %>%
+    {
+        bigrams <- .
+        total <-
+            bigrams %>%
+            pull(bigram) %>%
+            length()
+        bigrams %>%
+            group_by(bigram) %>%
+            summarize(count = n(),
+                      frequency = count / total) %>%
+            ungroup()
+    } %>%
+    arrange(frequency %>% desc())
+```
 
-#### Header 4
+```{R, bigrams_ending_sentence}
+# Calculate the frequency of bigrams ending a sentence, filtering stopwords
+# according to the SMART scheme mentioned above. Order by descending
+# frequency.
+bigram_ending_sentence_freqs <-
+    bigrams %>%
+    group_by(sentence_num) %>%
+    summarize(bigram = last(bigram)) %>%
+    ungroup() %>%
+    separate(bigram, c('word1', 'word2'), sep = '\\s+') %>%
+    filter(word1 %in% smart_stopwords %>% not(),
+           word2 %in% smart_stopwords %>% not()) %>%
+    unite(bigram, word1, word2, sep = ' ') %>%
+    {
+        bigrams <- .
+        total <-
+            bigrams %>%
+            pull(bigram) %>%
+            length()
+        bigrams %>%
+            group_by(bigram) %>%
+            summarize(count = n(),
+                      frequency = count / total) %>%
+            ungroup()
+    } %>%
+    arrange(frequency %>% desc())
+```
 
-##### Header 5
+```{R, trigrams_starting_sentence}
+# Find all trigrams not containing SMART stopwords that start a sentence.
+trigrams_starting_sentence <-
+    trigrams %>%
+    group_by(sentence_num) %>%
+    summarize(trigram = first(trigram)) %>%
+    ungroup() %>%
+    separate(trigram, c('word1', 'word2', 'word3'), sep = '\\s+') %>%
+    filter(word1 %in% smart_stopwords %>% not(),
+           word2 %in% smart_stopwords %>% not(),
+           word2 %in% smart_stopwords %>% not()) %>%
+    unite(trigram, word1, word2, word3, sep = ' ') %>%
+    pull(trigram)
+```
 
-###### Header 6
+```{R, trigrams_ending_sentence}
+# Find all trigrams not containing SMART stopwords that end a sentence.
+trigrams_ending_sentence <-
+    trigrams %>%
+    group_by(sentence_num) %>%
+    summarize(trigram = last(trigram)) %>%
+    ungroup() %>%
+    separate(trigram, c('word1', 'word2', 'word3'), sep = '\\s+') %>%
+    filter(word1 %in% smart_stopwords %>% not(),
+           word2 %in% smart_stopwords %>% not(),
+           word2 %in% smart_stopwords %>% not()) %>%
+    unite(trigram, word1, word2, word3, sep = ' ') %>%
+    pull(trigram)
+```
 
-<!--Text comment>
+```{R, word_correlations_by_sentence}
+# Find correlations between all words except SMART stopwords by sentence
+sentence_word_corrs <-
+    words %>%
+    filter(word %in% smart_stopwords %>% not()) %>%
+    pairwise_cor(word, sentence_num, method = 'pearson') %>%
+    rename(word1 = item1, word2 = item2) %>%
+    arrange(correlation %>% desc())
+```
 
-<em>HTML output!<em>
-\textbf{TeX output}
+```{R, word_correlations_by_paragraph}
+# Find correlations between all words except SMART stopwords by paragraph
+paragraph_word_corrs <-
+    words %>%
+    filter(word %in% smart_stopwords %>% not()) %>%
+    pairwise_cor(word, paragraph_num, method = 'pearson') %>%
+    rename(word1 = item1, word2 = item2) %>%
+    arrange(correlation %>% desc())
+```
 
-<http://www.google.com/>
+```{R, word_correlations_by_section}
+# Find correlations between all words except SMART stopwords by section
+section_word_corrs <-
+    words %>%
+    filter(word %in% smart_stopwords %>% not()) %>%
+    pairwise_cor(word, section_num, method = 'pearson') %>%
+    rename(word1 = item1, word2 = item2) %>%
+    arrange(correlation %>% desc())
+```
 
-[google](http://www.google.com/)
+```{R, load_plotting_packages}
+# Load plotting packages
+suppressPackageStartupMessages({
+    library(cowplot)    # Easily combine `ggplot2`-based graphics
+    library(extrafont)  # Access additional system fonts
+    library(ggplotify)  # Convert base R graphics to `ggplot2` objects
+    library(ggplot2)    # Grammar of graphics-based visualization
+    library(scales)     # Provide improved axis labels
+    library(wordcloud)  # Wordcloud with base R graphics
+})
+```
 
-* level 1
-  + level 2
-    - level 3
-* level 1
+```{R, declare_colors_and_desaturation}
+# Declare a color scheme matching that in the Microsoft Word template
+# referenced in `reference_docx` for later use
+docx_colors <-
+    c(text_background_dark1 = rgb(0, 0, 0, maxColorValue = 255),
+      text_background_light1 = rgb(255, 255, 255, maxColorValue = 255),
+      text_background_dark2 = rgb(68, 77, 38, maxColorValue = 255),
+      text_background_light2 = rgb(254, 250, 201, maxColorValue = 255),
+      accent1 = rgb(165, 181, 146, maxColorValue = 255),
+      accent2 = rgb(243, 164, 71, maxColorValue = 255),
+      accent3 = rgb(231, 188, 41, maxColorValue = 255),
+      accent4 = rgb(208, 146, 167, maxColorValue = 255),
+      accent5 = rgb(156, 133, 192, maxColorValue = 255),
+      accent6 = rgb(128, 158, 194, maxColorValue = 255),
+      hyperlink = rgb(142, 88, 182, maxColorValue = 255),
+      followed_hyperlink = rgb(127, 111, 111, maxColorValue = 255))
 
-1. one
-2. one
-  i) two
-    A. three
+# Create utility function for color desaturation
+desaturate = function(cols, ds=0.4, dv=0.7) {
+  cols = rgb2hsv(col2rgb(cols))
+  cols["v", ] = cols["v", ] + dv*(1 - cols["v", ])
+  cols["s", ] = ds*cols["s", ]
+  apply(cols, 2, function(x) hsv(x[1], x[2], x[3]))
+}
+```
 
-(@) interrupted
+```{R, declare_load_check_fonts}
+# Declare a set of fonts coordinated with the Microsoft Word template referenced
+# in `reference_docx` for later use
+docx_fonts <-
+    c(headings = 'Franklin Gothic Medium',
+      body = 'Franklin Gothic Book')
 
-this
+# Verify required fonts are available
+if (docx_fonts %in% fonts() %>% all() %>% not()) {
+    warning('Importing fonts... this will take some time!')
+    font_import(prompt = FALSE)
+} else if (docx_fonts %in% fonts() %>% all() %>% not()) {
+    stop('Required fonts not found.')
+}
 
-(@) continues
+# Load fonts on Windows devices
+if (.Platform$OS.type != 'windows') {
+    stop('Unsupported operating system.')
+} else if (docx_fonts %in% windowsFonts() %>% all() %>% not()) {
+        loadfonts(device = 'win')
+}
+```
 
+```{R, word_frequency_plot}
+# Create plot showing word frequencies after SMART stopwords are removed
+word_freq_plot <-
+    word_freqs %>%
+    slice(1:5) %>%
+    mutate(word = reorder(word, frequency)) %>%
+    ggplot(aes(x = word)) +
+    geom_segment(aes(xend = word, y = 0, yend = frequency), size = 1) +
+    geom_point(aes(y = frequency), size = 2) +
+    coord_flip() +
+    ggtitle('Word Frequencies') +
+    scale_y_continuous(labels = percent_format(accuracy = 0.1)) +
+    theme_cowplot() +
+    theme(axis.title = element_blank(), axis.ticks = element_blank(),
+          axis.line = element_blank(),
+          axis.text = element_text(family = 'Franklin Gothic Book'),
+          title = element_text(family = 'Franklin Gothic Medium'))
+```
 
-Term
-: Definition of something
+```{R, bigram_frequency_plot}
+# Create plot showing frequencies of bigrams after SMART stopwords are
+# removed
+bigram_freq_plot <-
+    bigram_freqs %>%
+    slice(1:5) %>%
+    mutate(bigram = reorder(bigram, frequency)) %>%
+    ggplot(aes(x = bigram)) +
+    geom_segment(aes(xend = bigram, y = 0, yend = frequency), size = 1) +
+    geom_point(aes(y = frequency), size = 2) +
+    coord_flip() +
+    ggtitle('Bigram Frequencies') +
+    scale_y_continuous(labels = percent_format(accuracy = 0.1)) +
+    theme_cowplot() +
+    theme(axis.title = element_blank(), axis.ticks = element_blank(),
+          axis.line = element_blank(),
+          axis.text = element_text(family = 'Franklin Gothic Book'),
+          title = element_text(family = 'Franklin Gothic Medium'))
+```
 
-| right | left | default | center |
-|------:|:-----|---------|:------:|
-| 12    | 12   | 12      | 12     |
-| 1.2   | 1.2  | 1.2     | 1.2    |
-| $1.00 | $1.00| $1.00   | $1.00  |
+```{R, trigram_frequency_plot}
+# Create plot showing frequency of trigrams after SMART stopwords are removed
+trigram_freq_plot <-
+    trigram_freqs %>%
+    slice(1:5) %>%
+    mutate(trigram = reorder(trigram, frequency)) %>%
+    ggplot(aes(x = trigram)) +
+    geom_segment(aes(xend = trigram, y = 0, yend = frequency), size = 1) +
+    geom_point(aes(y = frequency), size = 2) +
+    coord_flip() +
+    ggtitle('Trigram Frequencies') +
+    scale_y_continuous(labels = percent_format(accuracy = 0.1)) +
+    theme_cowplot() +
+    theme(axis.title = element_blank(), axis.ticks = element_blank(),
+          axis.line = element_blank(),
+          axis.text = element_text(family = 'Franklin Gothic Book'),
+          title = element_text(family = 'Franklin Gothic Medium'))
+```
 
-- slide
-- bullet
+```{R, frequency_plot_grid}
+# Bind frequency plots into single row
+freq_plot_grid <- plot_grid(word_freq_plot, bigram_freq_plot,
+                            trigram_freq_plot, nrow = 1,
+                            rel_widths = c(1, 1.2, 1.4))
+```
 
-horizontal rule
+```{R, token_distribution_plot}
+# Create plot showing the distribution of key words throughout the text
+# using a background of sentence, paragraph, and section breaks to put words
+# in context
+background_colors <-
+    docx_colors %>%
+    `[`(c('accent1', 'accent6')) %>%
+    unname() %>%
+    desaturate() %>%
+    rep(1000)
 
-***
+initial_plot_background <-
+    words %>%
+    ggplot() +
+    geom_ribbon(aes(x = word_num, fill = factor(sentence_num),
+                    color = factor(sentence_num)),
+                ymin = 0.0, ymax = 1.0, alpha = 1) +
+    geom_ribbon(aes(x = word_num, fill = factor(paragraph_num),
+                    color = factor(paragraph_num)),
+                ymin = 0.1, ymax = 0.9, alpha = 1) +
+    geom_ribbon(aes(x = word_num, fill = factor(section_num),
+                    color = factor(section_num)),
+                ymin = 0.2, ymax = 0.8, alpha = 1)
 
-A footnote [^1]
+with_token_distribution <-
+    initial_plot_background +
+    geom_segment(aes(x = case_when(word == 'man' ~ word_num,
+                                   TRUE ~ NA_integer_),
+                     xend = case_when(word == 'man' ~ word_num,
+                                      TRUE ~ NA_integer_)),
+                 y = 0.7125, yend = 0.7875, na.rm = TRUE) +
+    geom_segment(aes(x = case_when(word == 'men' ~ word_num,
+                                   TRUE ~ NA_integer_),
+                     xend = case_when(word == 'men' ~ word_num,
+                                      TRUE ~ NA_integer_)),
+                 y = 0.6125, yend = 0.6875, na.rm = TRUE) +
+    geom_segment(aes(x = case_when(word == 'money' ~ word_num,
+                                   TRUE ~ NA_integer_),
+                     xend = case_when(word == 'money' ~ word_num,
+                                      TRUE ~ NA_integer_)),
+                 y = 0.5125, yend = 0.5875, na.rm = TRUE) +
+    geom_segment(aes(x = case_when(word == 'dollars' ~ word_num,
+                                   TRUE ~ NA_integer_),
+                     xend = case_when(word == 'dollars' ~ word_num,
+                                      TRUE ~ NA_integer_)),
+                 y = 0.4125, yend = 0.4875, na.rm = TRUE) +
+    geom_segment(aes(x = case_when(word == 'woman' ~ word_num,
+                                   TRUE ~ NA_integer_),
+                     xend = case_when(word == 'woman' ~ word_num,
+                                      TRUE ~ NA_integer_)),
+                 y = 0.3125, yend = 0.3875, na.rm = TRUE) +
+    geom_segment(aes(x = case_when(word == 'women' ~ word_num,
+                                   TRUE ~ NA_integer_),
+                     xend = case_when(word == 'women' ~ word_num,
+                                      TRUE ~ NA_integer_)),
+                 y = 0.2125, yend = 0.2875, na.rm = TRUE)
 
-[^1]: The footnote
+with_style_and_scaling <- 
+    with_token_distribution +
+    scale_x_continuous(name = NULL, breaks = NULL,
+                       minor_breaks = NULL,
+                       labels = NULL) +
+    scale_y_continuous(name = NULL,
+                       breaks = c(0.25, 0.35, 0.45, 0.55, 0.65, 0.75),
+                       minor_breaks = NULL,
+                       labels = c('Women', 'Woman', 'Dollars', 'Money', 'Men',
+                                  'Man'),
+                       limits = c(0, 1),
+                       sec.axis = sec_axis(
+                           ~., breaks = c(0.05, 0.15, 0.5, 0.85, 0.95),
+                           labels = c('Sentences', 'Paragraphs', 'Sections',
+                                      'Paragraphs', 'Sentences'))) +
+    scale_fill_manual(values = background_colors) +
+    scale_color_manual(values = background_colors) +
+    guides(fill = FALSE, color = FALSE) +
+    theme(axis.line = element_blank(), panel.border = element_blank(),
+          axis.ticks = element_blank(),
+          axis.text = element_text(family = 'Franklin Gothic Book'),
+          title = element_text(family = 'Franklin Gothic Medium'))
+
+token_distribution_plot <-
+    with_style_and_scaling +
+    ggtitle('Word Distribution')
+```
+
+```{R, combine_plots}
+combined_plot_grid <- plot_grid(freq_plot_grid, token_distribution_plot,
+                                ncol = 1, rel_heights = c(0.3, 0.7))
+```
+
+P.T. Barnum's ... 
+
+"men" is the most frequent start of a sentence, "young men"
+"business" is the most frequent end to the sentence, "thousand dollars"
+no. of the 32 trigrams starting
+no. of the trigrams ending
+tightly focused on ...
+
+Women, by contrast, are barely mentioned in Barnum's work except insofar as
+their profligacy---or misplaced thrift---may part a man from his money or
+otherwise cloud his fortunes. Once Barnum proceeds from cautionary tales of
+feminine extravagance to practical advice they cease to be mentioned except
+in the throwaway phrase "men and women," whose use, incidentally, is the sole
+source of the correlation between "money" and "women" in the text.[^1] One's
+impression that Barnum sees women as accessories rather than as independent
+agents is hardly dispelled by his exclusive use of the phrase "good woman"
+to describe them.[^2] The words least frequently co-occuring with "woman" in a
+sentence are "business," "man," and "money", while "women" are least frequently associated with "business."[^3] A woman never starts or ends a sentence,
+paragraph, or section:[^4] Her role is purely illustrative. Barnum's advice is
+neither for women nor about them. The lesson is clear: In Barnum's world,
+business---and opportunity---is an exclusively male affair.
+
+```{R, show_freq, fig.width = 10, fig.height = 5, dpi = 600, fig.cap = caption}
+caption <- str_c('Word, bigram, and trigram frequencies were calculated after',
+                 ' removal of stopwords used by Chris Buckley and Gerard', 
+                 ' Salton in the SMART information retrieval system at',
+                 ' Cornell University. Alternately shaded backgrounds',
+                 ' in word distributions represent section, paragraph, and',
+                 ' sentence breaks. All sections besides the introduction',
+                 ' are headed with pithy advice.')
+combined_plot_grid
+```
+
+[^1]: This
+[^2]: That
+[^3]: The other
+[^4]: Another
