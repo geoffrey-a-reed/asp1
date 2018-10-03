@@ -12,7 +12,7 @@ knitr::opts_knit$set(eval.after = 'fig.cap')
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
-```{R, load_analysis_packages}
+```{R, load_analysis_packages, results = FALSE}
 # Load analytical packages
 suppressPackageStartupMessages({
     library(dplyr)     # Manipulating data frames
@@ -26,14 +26,14 @@ suppressPackageStartupMessages({
 })
 ```
 
-```{R, stopwords}
+```{R, stopwords, results = FALSE}
 # Collect SMART stopwords in a data frame and vector for future use
 smart_stopwords <-
     get_stopwords(language = 'en', source = 'smart') %>%
     pull(word)
 ```
 
-```{R, read_preprocess_text}
+```{R, read_preprocess_text, results = FALSE}
 # Read and preprocess project text into a data frame
 text <-
     data_frame(text = read_file('Text File for ASP1.txt'),
@@ -59,7 +59,7 @@ text <-
                                  ':\\s+' = ': ')))
 ```
 
-```{R, split_sections}
+```{R, split_sections, results = FALSE}
 # Split text into numbered sections (by four consecutive blank lines), keeping
 # redundent text numbering
 sections <-
@@ -69,7 +69,7 @@ sections <-
     mutate(section_num = 1:length(section))
 ```
 
-```{R, split_paragraphs}
+```{R, split_paragraphs, results = FALSE}
 # Split sections into numbered paragraphs (by one blank line), keeping text and
 # section numbers
 paragraphs <-
@@ -79,7 +79,7 @@ paragraphs <-
     mutate(paragraph_num = 1:length(paragraph))
 ```
 
-```{R, split_sentences}
+```{R, split_sentences, results = FALSE}
 # Split paragraphs into numbered sentences (via `tidytext`-specific splitting
 # algorithm), keeping text, section, and paragraph numbers
 sentences <-
@@ -89,7 +89,7 @@ sentences <-
     mutate(sentence_num = 1:length(sentence))
 ```
 
-```{R, split_words}
+```{R, split_words, results = FALSE}
 # Split sentences into numbered words (via `tidytext`-specific splitting
 # algorithm), removing any tokens containing numbers. Keep text, section,
 # paragraph, and sentence numbers.
@@ -102,7 +102,7 @@ words <-
     mutate(word_num = 1:length(word))
 ```
 
-```{R, split_bigrams}
+```{R, split_bigrams, results = FALSE}
 # Split sentences into numbered bigrams (via `tidytext`-specific splitting
 # algorithm), removing any tokens containing numbers. Keep text, section,
 # paragraph, and sentence numbers.
@@ -115,7 +115,7 @@ bigrams <-
     mutate(bigram_num = 1:length(bigram))
 ```
 
-```{R, split_trigrams}
+```{R, split_trigrams, results = FALSE}
 # Split sentences into numberd trigrams (via `tidytext`-specific splitting
 # algorithm), removing any tokens containing numbers. Keep text, section,
 # paragraph, and sentence numbers.
@@ -128,7 +128,7 @@ trigrams <-
     mutate(trigram_num = 1:length(trigram))
 ```
 
-```{R, word_frequencies}
+```{R, word_frequencies, results = FALSE}
 # Calculate word frequencies, filtering stopwords according to the scheme
 # used by Gerard Salton and Chris Buckley in Cornell's SMART information
 # retrieval system. Order by descending frequency.
@@ -150,7 +150,7 @@ word_freqs <-
     arrange(frequency %>% desc())
 ```
 
-```{R, bigram_frequencies}
+```{R, bigram_frequencies, results = FALSE}
 # Calculate bigram frequencies, filtering stopwords according to the scheme
 # used by Gerard Salton and Chris Buckley in Cornell's SMART information
 # retrieval system. Order by descending frequency.
@@ -175,7 +175,7 @@ bigram_freqs <-
     arrange(frequency %>% desc())
 ```
 
-```{R, trigram_frequencies}
+```{R, trigram_frequencies, results = FALSE}
 # Calculate trigram frequencies, filtering stopwords according to the scheme
 # used by Gerard Salton and Chris Buckley in Cornell's SMART information
 # retrieval system. Order by descending frequency.
@@ -201,7 +201,7 @@ trigram_freqs <-
     arrange(frequency %>% desc())
 ```
 
-```{R, words_starting_sentence}
+```{R, words_starting_sentence, results = FALSE}
 # Calculate the frequency of words starting a sentence, filtering stopwords
 # according to the SMART scheme mentioned above. Order by descending
 # frequency.
@@ -226,7 +226,7 @@ word_starting_sentence_freqs <-
     arrange(frequency %>% desc())
 ```
 
-```{R, words_ending_sentence}
+```{R, words_ending_sentence, results = FALSE}
 # Calculate the frequency of words ending a sentence, filtering stopwords
 # according to the SMART scheme mentioned above. Order by descending
 # frequency.
@@ -251,7 +251,7 @@ word_ending_sentence_frequencies <-
     arrange(frequency %>% desc())
 ```
 
-```{R, bigrams_starting_sentence}
+```{R, bigrams_starting_sentence, results = FALSE}
 # Calculate the frequency of bigrams starting a sentence, filtering stopwords
 # according to the SMART scheme mentioned above. Order by descending
 # frequency.
@@ -279,7 +279,7 @@ bigram_starting_sentence_freqs <-
     arrange(frequency %>% desc())
 ```
 
-```{R, bigrams_ending_sentence}
+```{R, bigrams_ending_sentence, results = FALSE}
 # Calculate the frequency of bigrams ending a sentence, filtering stopwords
 # according to the SMART scheme mentioned above. Order by descending
 # frequency.
@@ -307,7 +307,7 @@ bigram_ending_sentence_freqs <-
     arrange(frequency %>% desc())
 ```
 
-```{R, trigrams_starting_sentence}
+```{R, trigrams_starting_sentence, results = FALSE}
 # Find all trigrams not containing SMART stopwords that start a sentence.
 trigrams_starting_sentence <-
     trigrams %>%
@@ -322,7 +322,7 @@ trigrams_starting_sentence <-
     pull(trigram)
 ```
 
-```{R, trigrams_ending_sentence}
+```{R, trigrams_ending_sentence, results = FALSE}
 # Find all trigrams not containing SMART stopwords that end a sentence.
 trigrams_ending_sentence <-
     trigrams %>%
@@ -337,7 +337,7 @@ trigrams_ending_sentence <-
     pull(trigram)
 ```
 
-```{R, word_correlations_by_sentence}
+```{R, word_correlations_by_sentence, results = FALSE}
 # Find correlations between all words except SMART stopwords by sentence
 sentence_word_corrs <-
     words %>%
@@ -347,7 +347,7 @@ sentence_word_corrs <-
     arrange(correlation %>% desc())
 ```
 
-```{R, word_correlations_by_paragraph}
+```{R, word_correlations_by_paragraph, results = FALSE}
 # Find correlations between all words except SMART stopwords by paragraph
 paragraph_word_corrs <-
     words %>%
@@ -357,7 +357,7 @@ paragraph_word_corrs <-
     arrange(correlation %>% desc())
 ```
 
-```{R, word_correlations_by_section}
+```{R, word_correlations_by_section, results = FALSE}
 # Find correlations between all words except SMART stopwords by section
 section_word_corrs <-
     words %>%
@@ -367,7 +367,7 @@ section_word_corrs <-
     arrange(correlation %>% desc())
 ```
 
-```{R, load_plotting_packages}
+```{R, load_plotting_packages, results = FALSE}
 # Load plotting packages
 suppressPackageStartupMessages({
     library(cowplot)    # Easily combine `ggplot2`-based graphics
@@ -379,7 +379,7 @@ suppressPackageStartupMessages({
 })
 ```
 
-```{R, declare_colors_and_desaturation}
+```{R, declare_colors_and_desaturation, results = FALSE}
 # Declare a color scheme matching that in the Microsoft Word template
 # referenced in `reference_docx` for later use
 docx_colors <-
@@ -405,7 +405,7 @@ desaturate = function(cols, ds=0.4, dv=0.7) {
 }
 ```
 
-```{R, declare_load_check_fonts}
+```{R, declare_load_check_fonts, results = FALSE}
 # Declare a set of fonts coordinated with the Microsoft Word template referenced
 # in `reference_docx` for later use
 docx_fonts <-
@@ -428,7 +428,7 @@ if (.Platform$OS.type != 'windows') {
 }
 ```
 
-```{R, word_frequency_plot}
+```{R, word_frequency_plot, results = FALSE}
 # Create plot showing word frequencies after SMART stopwords are removed
 word_freq_plot <-
     word_freqs %>%
@@ -447,7 +447,7 @@ word_freq_plot <-
           title = element_text(family = 'Franklin Gothic Medium'))
 ```
 
-```{R, bigram_frequency_plot}
+```{R, bigram_frequency_plot, results = FALSE}
 # Create plot showing frequencies of bigrams after SMART stopwords are
 # removed
 bigram_freq_plot <-
@@ -467,7 +467,7 @@ bigram_freq_plot <-
           title = element_text(family = 'Franklin Gothic Medium'))
 ```
 
-```{R, trigram_frequency_plot}
+```{R, trigram_frequency_plot, results = FALSE}
 # Create plot showing frequency of trigrams after SMART stopwords are removed
 trigram_freq_plot <-
     trigram_freqs %>%
@@ -486,14 +486,14 @@ trigram_freq_plot <-
           title = element_text(family = 'Franklin Gothic Medium'))
 ```
 
-```{R, frequency_plot_grid}
+```{R, frequency_plot_grid, results = FALSE}
 # Bind frequency plots into single row
 freq_plot_grid <- plot_grid(word_freq_plot, bigram_freq_plot,
                             trigram_freq_plot, nrow = 1,
                             rel_widths = c(1, 1.2, 1.4))
 ```
 
-```{R, token_distribution_plot}
+```{R, token_distribution_plot, results = FALSE}
 # Create plot showing the distribution of key words throughout the text
 # using a background of sentence, paragraph, and section breaks to put words
 # in context
@@ -578,10 +578,18 @@ token_distribution_plot <-
     ggtitle('Word Distribution')
 ```
 
-```{R, combine_plots}
+```{R, combine_plots, results = FALSE}
 combined_plot_grid <- plot_grid(freq_plot_grid, token_distribution_plot,
                                 ncol = 1, rel_heights = c(0.3, 0.7))
 ```
+
+Despite the provocative title, the primary theme of P.T. Barnum .. is not money,
+but men.
+
+
+
+Despite his title, the primary theme in P.T. Barnum's *The Art of
+Money Getting* 
 
 P.T. Barnum's ... 
 
