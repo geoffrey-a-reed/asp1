@@ -1,7 +1,6 @@
 ---
-title: "Man of Business"
-subtitle: "Masculine Fortune-Seeking in P.T. Barnum's *The Art of Money
-           Getting*"
+title: "Men of Business"
+subtitle: "Masculine Wealth-Seeking in P.T. Barnum's *The Art of Money Getting*"
 output: 
   word_document:
     reference_docx: "asp1_style_reference.docx"
@@ -583,48 +582,84 @@ combined_plot_grid <- plot_grid(freq_plot_grid, token_distribution_plot,
                                 ncol = 1, rel_heights = c(0.3, 0.7))
 ```
 
-Despite the provocative title, the primary theme of P.T. Barnum .. is not money,
-but men.
-
-
-
-Despite his title, the primary theme in P.T. Barnum's *The Art of
-Money Getting* 
-
-P.T. Barnum's ... 
-
-"men" is the most frequent start of a sentence, "young men"
-"business" is the most frequent end to the sentence, "thousand dollars"
-no. of the 32 trigrams starting
-no. of the trigrams ending
-tightly focused on ...
+Despite its title, P.T. Barnum's *The Art of Money Getting* isn't concerned
+with money-making in general: Its focus is rather the particular case of
+men---especially upstanding young men---pursuing wealth. The two strongest
+correlations with "man" in a sentence are "honest" and "business."[^1] "Men"
+start sentences and "business" ends them, while "young men" and
+"thousand dollars" are the most frequent bigrams starting and ending a sentence.
+Of the 32 trigrams that start a sentence 21 concern men, while of the 19 ending
+one 11 concern business or money-making.[^2] Though token positions in a
+sentence don't map directly to grammar, it would be reasonable to infer that
+tokens starting sentences are subjects while those ending them are
+predicates---and, therefore, that the primary topic of Barnum's text is men
+doing business.
 
 Women, by contrast, are barely mentioned in Barnum's work except insofar as
 their profligacy---or misplaced thrift---may part a man from his money or
 otherwise cloud his fortunes. Once Barnum proceeds from cautionary tales of
 feminine extravagance to practical advice they cease to be mentioned except
 in the throwaway phrase "men and women," whose use, incidentally, is the sole
-source of the correlation between "money" and "women" in the text.[^1] One's
+source of the correlation between "money" and "women" in the text.[^3] One's
 impression that Barnum sees women as accessories rather than as independent
 agents is hardly dispelled by his exclusive use of the phrase "good woman"
-to describe them.[^2] The words least frequently co-occuring with "woman" in a
-sentence are "business," "man," and "money", while "women" are least frequently associated with "business."[^3] A woman never starts or ends a sentence,
-paragraph, or section:[^4] Her role is purely illustrative. Barnum's advice is
+to describe them.[^4] The words least frequently co-occuring with "woman" in a
+sentence are "business," "man," and "money", while "women" are least frequently
+associated with "business."[^5] A woman never starts or ends a sentence,
+paragraph, or section: Her role is purely illustrative. Barnum's advice is
 neither for women nor about them. The lesson is clear: In Barnum's world,
 business---and opportunity---is an exclusively male affair.
 
 ```{R, show_freq, fig.width = 10, fig.height = 5, dpi = 600, fig.cap = caption}
-caption <- str_c('Word, bigram, and trigram frequencies were calculated after',
-                 ' removal of stopwords used by Chris Buckley and Gerard', 
-                 ' Salton in the SMART information retrieval system at',
-                 ' Cornell University. Alternately shaded backgrounds',
-                 ' in word distributions represent section, paragraph, and',
-                 ' sentence breaks. All sections besides the introduction',
-                 ' are headed with pithy advice.')
+caption <- str_c('*Figure 1*: Word, bigram, and trigram frequencies were',
+                 ' calculated after removal of stopwords used by Chris Buckley',
+                 ' and Gerard Salton in the SMART information retrieval ',
+                 ' system at Cornell University. Alternately shaded ',
+                 ' backgrounds in word distributions represent section, ',
+                 ' paragraph, and sentence breaks. All sections besides the ',
+                 ' introduction are headed with pithy advice.')
 combined_plot_grid
 ```
 
-[^1]: This
-[^2]: That
-[^3]: The other
-[^4]: Another
+```{R, footnote1, results = FALSE}
+# Create text showing the two strongest sentence correlations of 'man'
+footnote1_correlations <-
+  sentence_word_corrs %>%
+  filter(word1 == 'man') %>%
+  arrange(desc(correlation)) %>%
+  slice(1:2) %>%
+  pull(correlation) %>%
+  round(digits = 2) %>%
+  str_c(collapse = ' and ')
+```
+
+```{R, footnote2, results = FALSE}
+# Create text showing the strongest sentence correlation of "money"
+footnote2_correlations <-
+  sentence_word_corrs %>%
+  filter(word1 == 'money') %>%
+  arrange(desc(correlation)) %>%
+  slice(1:1) %>%
+  pull(correlation) %>%
+  round(digits = 2)
+```
+
+```{R, footnote4, results = FALSE}
+# Create text showing the weakest sentence correlation of "women"
+footnote4_correlations <-
+  sentence_word_corrs %>%
+  filter(word1 == 'women', word2 == 'business') %>%
+  pull(correlation) %>%
+  round(digits = 2)
+```
+
+[^1]: Pearson's $r$ for "honest" and "business" with "man" in a sentence is
+      `r footnote1_correlations`, respectively.
+[^2]: Any words, bigrams, or trigrams containting SMART stopwords were removed
+      from frequency calculations.
+[^3]: Pearson's $r$ for "women" with "money" in a sentence is
+      `r footnote2_correlations`.
+[^4]: All uses of the word "woman" seen in *Figure 1* form part of the bigram
+      "good woman."
+[^5]: Pearson's $r$ for "business" with "women" in a sentence is
+      `r footnote4_correlations`.
